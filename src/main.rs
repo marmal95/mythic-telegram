@@ -46,7 +46,6 @@ fn decode(config: &DecodeConfig) {
 
     let (file_name, decoded_data) = decoder::decode(&config.algorithm, &image);
 
-    dbg!(file_name.clone());
     let mut data_file = File::create(file_name).unwrap();
     data_file.write_all(&decoded_data).unwrap();
 }
