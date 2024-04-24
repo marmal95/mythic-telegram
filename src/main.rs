@@ -1,8 +1,8 @@
 use fictional_telegram::{
     cli::{self, DecodeConfig, EncodeConfig, Mode},
-    coder::{decoder::Decoder, encoder::Encoder},
+    coder::{decoder, encoder},
 };
-use image::{io::Reader as ImageReader, RgbImage};
+use image::io::Reader as ImageReader;
 use std::{
     fs::File,
     io::{Read, Write},
@@ -25,19 +25,15 @@ fn encode(config: &EncodeConfig) {
         .decode()
         .unwrap();
 
-    let image_data = image.to_rgb8().into_raw();
-    let encoder = Encoder::new(
-        image_data,
+    let encoded_filename = "encoded_".to_owned() + image_filename;
+    let encoded_image = encoder::encode(
+        &config.algorithm,
+        &image,
         data_buffer,
-        config.bits_per_channel,
         message_filename.to_string(),
     );
-    let encoded_data = encoder.encode();
-    let encoded_image = RgbImage::from_vec(image.width(), image.height(), encoded_data).unwrap();
 
-    encoded_image
-        .save("encoded_".to_owned() + image_filename)
-        .unwrap();
+    encoded_image.save(encoded_filename.as_str()).unwrap();
 }
 
 fn decode(config: &DecodeConfig) {
@@ -48,12 +44,10 @@ fn decode(config: &DecodeConfig) {
         .decode()
         .unwrap();
 
-    let image_data = image.to_rgb8().into_raw();
-    let decoder = Decoder::new(image_data, config.bits_per_channel);
+    let (file_name, decoded_data) = decoder::decode(&config.algorithm, &image);
 
-    let (file_name, decoded_data) = decoder.decode();
+    dbg!(file_name.clone());
     let mut data_file = File::create(file_name).unwrap();
-
     data_file.write_all(&decoded_data).unwrap();
 }
 
