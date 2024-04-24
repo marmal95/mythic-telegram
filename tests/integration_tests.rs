@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fictional_telegram::{
-        cli::{Algorithm, RgbAlgorithmConfig},
+        config::{Algorithm, RgbAlgorithmConfig},
         coder::{decoder, encoder},
     };
     use image::DynamicImage;

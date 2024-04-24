@@ -1,6 +1,6 @@
 use image::{DynamicImage, RgbImage, RgbaImage};
 
-use crate::cli::{Algorithm, RgbAlgorithmConfig};
+use crate::config::{Algorithm, RgbAlgorithmConfig};
 
 use super::{alpha_encoder::AlphaEncoder, rgb_encoder::RgbEncoder};
 

@@ -1,6 +1,6 @@
 use image::DynamicImage;
 
-use crate::cli::Algorithm;
+use crate::config::Algorithm;
 
 use super::{alpha_decoder::AlphaDecoder, rgb_decoder::RgbDecoder};
 

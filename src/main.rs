@@ -1,5 +1,5 @@
 use fictional_telegram::{
-    cli::{self, DecodeConfig, EncodeConfig, Mode},
+    config::{self, DecodeConfig, EncodeConfig, Mode},
     coder::{decoder, encoder},
 };
 use image::io::Reader as ImageReader;
@@ -51,7 +51,7 @@ fn decode(config: &DecodeConfig) {
 }
 
 fn main() {
-    let cli = cli::parse();
+    let cli = config::parse();
 
     match cli.mode {
         Mode::Encode(encode_cfg) => {
