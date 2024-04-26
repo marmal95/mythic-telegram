@@ -15,15 +15,15 @@ impl AlphaEncoder {
         }
     }
 
-    pub fn encode(mut self) -> Vec<u8> {
+    pub fn encode(mut self) -> Result<Vec<u8>, &'static str> {
         if self.bytes_to_encode() > self.max_bytes_to_encode() {
-            panic!("Too much data to encode in the image.")
+            return Err("Too much data to encode in the image.");
         }
 
         self.encode_file_name();
         self.encode_content();
 
-        self.buffer
+        Ok(self.buffer)
     }
 
     fn encode_file_name(&mut self) {
@@ -71,7 +71,6 @@ mod tests {
     use std::slice::Iter;
 
     #[test]
-    #[should_panic]
     fn not_enough_buffer() {
         let buffer = vec![0; 63];
         let data = "xyz".as_bytes();
@@ -85,7 +84,10 @@ mod tests {
         // = 16 (bytes) = 16 * 4 (only alpha channel use from rgba) = 64 needed channels/bytes
 
         let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
-        encoder.encode();
+        assert_eq!(
+            encoder.encode(),
+            Err("Too much data to encode in the image.")
+        )
     }
 
     #[test]
@@ -95,7 +97,7 @@ mod tests {
         let file_name = "x.png";
 
         let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
-        let encoded = encoder.encode();
+        let encoded = encoder.encode().unwrap();
         let mut encoded_it = encoded.iter();
 
         // Encoded layout:

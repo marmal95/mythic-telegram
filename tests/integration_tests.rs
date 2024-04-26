@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use fictional_telegram::{
-        config::{Algorithm, RgbAlgorithmConfig},
         coder::{decoder, encoder},
+        config::{Algorithm, RgbAlgorithmConfig},
     };
     use image::DynamicImage;
 
@@ -50,7 +50,8 @@ mod tests {
             &image,
             secret_message.to_vec(),
             secret_filename.to_string(),
-        );
+        )
+        .unwrap();
 
         let (decoded_filename, decoded_buffer) = decoder::decode(&algorithm, &encoded_image);
 
