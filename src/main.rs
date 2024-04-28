@@ -36,7 +36,7 @@ fn decode(config: &DecodeConfig) -> Result<(), Box<dyn Error>> {
     let image_filename = config.image_file.to_str().unwrap();
     let image = ImageReader::open(image_filename)?.decode()?;
 
-    let (file_name, decoded_data) = decoder::decode(&config.algorithm, &image);
+    let (file_name, decoded_data) = decoder::decode(&config.algorithm, &image)?;
 
     let mut data_file = File::create(file_name)?;
     data_file.write_all(&decoded_data)?;

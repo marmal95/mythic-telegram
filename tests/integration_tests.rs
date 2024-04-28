@@ -53,7 +53,8 @@ mod tests {
         )
         .unwrap();
 
-        let (decoded_filename, decoded_buffer) = decoder::decode(&algorithm, &encoded_image);
+        let (decoded_filename, decoded_buffer) =
+            decoder::decode(&algorithm, &encoded_image).unwrap();
 
         assert_eq!(secret_filename, decoded_filename);
         assert_eq!(secret_message, decoded_buffer);
