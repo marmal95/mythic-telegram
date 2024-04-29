@@ -1,8 +1,8 @@
-use fictional_telegram::{
+use image::io::Reader as ImageReader;
+use mystic_telegram::{
     coder::{decoder, encoder},
     config::{self, Config, DecodeConfig, EncodeConfig, Mode},
 };
-use image::io::Reader as ImageReader;
 use std::{
     error::Error,
     fs::File,
@@ -11,21 +11,21 @@ use std::{
 
 fn encode(config: &EncodeConfig) -> Result<(), Box<dyn Error>> {
     let image_filename = config.image_file.to_str().unwrap();
-    let message_filename = config.message_file.to_str().unwrap();
+    let secret_filename = config.message_file.to_str().unwrap();
 
-    let mut message_file = File::open(message_filename)?;
+    let mut secret_file = File::open(secret_filename)?;
 
     let mut data_buffer = Vec::new();
-    message_file.read_to_end(&mut data_buffer)?;
+    secret_file.read_to_end(&mut data_buffer)?;
 
     let image = ImageReader::open(image_filename)?.decode()?;
     let encoded_filename = "encoded_".to_owned() + image_filename;
 
     let encoded_image = encoder::encode(
         &config.algorithm,
-        &image,
+        image.to_rgba8(),
         data_buffer,
-        message_filename.to_string(),
+        secret_filename.to_string(),
     )?;
 
     encoded_image.save(encoded_filename.as_str())?;
@@ -36,7 +36,7 @@ fn decode(config: &DecodeConfig) -> Result<(), Box<dyn Error>> {
     let image_filename = config.image_file.to_str().unwrap();
     let image = ImageReader::open(image_filename)?.decode()?;
 
-    let (file_name, decoded_data) = decoder::decode(&config.algorithm, &image)?;
+    let (file_name, decoded_data) = decoder::decode(image.to_rgba8())?;
 
     let mut data_file = File::create(file_name)?;
     data_file.write_all(&decoded_data)?;

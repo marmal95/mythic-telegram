@@ -1,3 +1,5 @@
+use super::error::EncodeError;
+
 pub struct AlphaEncoder {
     buffer: Vec<u8>,
     data: Vec<u8>,
@@ -15,9 +17,11 @@ impl AlphaEncoder {
         }
     }
 
-    pub fn encode(mut self) -> Result<Vec<u8>, &'static str> {
+    pub fn encode(mut self) -> Result<Vec<u8>, EncodeError> {
         if self.bytes_to_encode() > self.max_bytes_to_encode() {
-            return Err("Too much data to encode in the image.");
+            return Err(EncodeError(
+                "Too much data to encode in the image.".to_string(),
+            ));
         }
 
         self.encode_file_name();
@@ -67,12 +71,14 @@ impl AlphaEncoder {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use std::slice::Iter;
 
+    use crate::coder::error::EncodeError;
+
     #[test]
     fn not_enough_buffer() {
-        let buffer = vec![0; 63];
         let data = "xyz".as_bytes();
         let file_name = "x.png";
 
@@ -82,20 +88,44 @@ mod tests {
         // + 4 (message size)
         // + 3 (data)
         // = 16 (bytes) = 16 * 4 (only alpha channel use from rgba) = 64 needed channels/bytes
+        let min_required_buffer = min_required_buffer(file_name.len(), data.len());
 
+        {
+            let buffer = vec![0; min_required_buffer];
+            let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
+            let encoded = encoder.encode();
+            assert!(encoded.is_ok())
+        }
+
+        let buffer = vec![0; min_required_buffer - 1];
         let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
         assert_eq!(
             encoder.encode(),
-            Err("Too much data to encode in the image.")
+            Err(EncodeError(
+                "Too much data to encode in the image.".to_string()
+            ))
         )
     }
 
     #[test]
     fn encode() {
-        let buffer = vec![0; 68];
         let data = "wolf".as_bytes();
         let file_name = "x.png";
+        let min_bytes_required = min_required_buffer(file_name.len(), data.len());
 
+        {
+            // Verify we use required minimum
+            let buffer = vec![0; min_bytes_required - 1];
+            let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
+            assert_eq!(
+                encoder.encode(),
+                Err(EncodeError(
+                    "Too much data to encode in the image.".to_string()
+                ))
+            )
+        }
+
+        let buffer = vec![0; min_bytes_required];
         let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
         let encoded = encoder.encode().unwrap();
         let mut encoded_it = encoded.iter();
@@ -131,11 +161,14 @@ mod tests {
         );
     }
 
-    #[allow(dead_code)]
     fn verify_encoded(iter: &mut Iter<u8>, bytes: &[u8]) {
         for &byte in bytes {
             (0..3).for_each(|_| assert_eq!(*iter.next().unwrap(), 0b0000_0000));
             assert_eq!(*iter.next().unwrap(), byte);
         }
+    }
+
+    fn min_required_buffer(filename_length: usize, data_length: usize) -> usize {
+        (4 + filename_length + 4 + data_length) * 4
     }
 }

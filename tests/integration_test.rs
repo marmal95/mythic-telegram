@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use fictional_telegram::{
+    use image::RgbaImage;
+    use mystic_telegram::{
         coder::{decoder, encoder},
         config::{Algorithm, RgbAlgorithmConfig},
     };
-    use image::DynamicImage;
 
     #[test]
     fn encode_decode_rgb_1bit() {
@@ -43,18 +43,17 @@ mod tests {
         let secret_message = "The quick brown fox jumps over the lazy dog".as_bytes();
         let secret_filename = "secret.txt";
 
-        let image = DynamicImage::new_rgb8(120, 120);
+        let image = RgbaImage::new(120, 120);
 
         let encoded_image = encoder::encode(
             &algorithm,
-            &image,
+            image,
             secret_message.to_vec(),
             secret_filename.to_string(),
         )
         .unwrap();
 
-        let (decoded_filename, decoded_buffer) =
-            decoder::decode(&algorithm, &encoded_image).unwrap();
+        let (decoded_filename, decoded_buffer) = decoder::decode(encoded_image).unwrap();
 
         assert_eq!(secret_filename, decoded_filename);
         assert_eq!(secret_message, decoded_buffer);

@@ -30,9 +30,6 @@ pub struct EncodeConfig {
 pub struct DecodeConfig {
     #[arg(short, long, help = "Path to image file holding hidden data.")]
     pub image_file: std::path::PathBuf,
-
-    #[command(subcommand)]
-    pub algorithm: Algorithm,
 }
 
 #[derive(Debug, Subcommand)]

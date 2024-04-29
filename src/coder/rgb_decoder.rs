@@ -1,5 +1,7 @@
 use crate::coder::util::{create_mask, BITS_IN_BYTE};
 
+use super::error::DecodeError;
+
 pub struct RgbDecoder {
     buffer: Vec<u8>,
     bits_per_channel: u8,
@@ -17,17 +19,18 @@ impl RgbDecoder {
         }
     }
 
-    pub fn decode(mut self) -> Result<(String, Vec<u8>), &'static str> {
-        self.validate_data_available(4)?;
+    pub fn decode(mut self) -> Result<(String, Vec<u8>), DecodeError> {
+        self.validate_data_available(4, "filename length")?;
         let file_name_length = self.decode_length();
 
-        self.validate_data_available(file_name_length)?;
-        let file_name = String::from_utf8(self.decode_data(file_name_length)).unwrap();
+        self.validate_data_available(file_name_length, "filename")?;
+        let filename = self.decode_data(file_name_length);
+        let file_name = String::from_utf8(filename).unwrap();
 
-        self.validate_data_available(4)?;
+        self.validate_data_available(4, "data length")?;
         let data_length = self.decode_length();
 
-        self.validate_data_available(data_length)?;
+        self.validate_data_available(data_length, "data")?;
         let data = self.decode_data(data_length);
 
         Ok((file_name, data))
@@ -68,7 +71,11 @@ impl RgbDecoder {
         byte
     }
 
-    fn validate_data_available(&self, length: usize) -> Result<(), &'static str> {
+    fn validate_data_available(
+        &self,
+        length: usize,
+        data_to_check: &str,
+    ) -> Result<(), DecodeError> {
         let all_bytes = self.buffer.len();
         let curr_byte = self.index;
         let left_bytes = all_bytes - curr_byte;
@@ -76,41 +83,59 @@ impl RgbDecoder {
 
         (left_bits >= length * BITS_IN_BYTE as usize)
             .then(|| {})
-            .ok_or("Not enough data to decode")
+            .ok_or(DecodeError(format!(
+                "Not enough data to decode {}",
+                data_to_check
+            )))
     }
 }
 
+#[cfg(test)]
 mod tests {
     use std::slice::IterMut;
+
+    use crate::coder::error::DecodeError;
 
     #[test]
     fn not_enough_data_to_decode_filename_length() {
         let bits_per_channel: u8 = 4;
-        let min_required_data = (4 * super::BITS_IN_BYTE / bits_per_channel) as usize;
-        let buffer = vec![0; min_required_data - 1];
+        let buffer = vec![0; 1];
 
         let decoder = super::RgbDecoder::new(buffer, bits_per_channel);
         let decoded = decoder.decode();
 
-        assert_eq!(decoded, Err("Not enough data to decode"));
+        assert_eq!(
+            decoded,
+            Err(DecodeError(
+                "Not enough data to decode filename length".to_string()
+            ))
+        );
     }
 
     #[test]
     fn not_enough_data_to_decode_filename() {
-        let filename_length = 12;
+        let filename_length = 10;
+        let data_length = 0;
         let bits_per_channel: u8 = 4;
 
-        let min_required_data =
-            ((4 + filename_length) * super::BITS_IN_BYTE / bits_per_channel) as usize;
-        let mut buffer = vec![0; min_required_data - 1];
+        let mut buffer = vec![
+            0;
+            min_required_data(filename_length, data_length, bits_per_channel)
+                - filename_length
+        ];
         let mut iter = buffer.iter_mut();
 
         fill_encoded(&mut iter, &[0; 7]);
-        fill_encoded(&mut iter, &[filename_length]);
+        fill_encoded(&mut iter, &[filename_length as u8]);
 
         let decoder = super::RgbDecoder::new(buffer, bits_per_channel);
         let decoded = decoder.decode();
-        assert_eq!(decoded, Err("Not enough data to decode"));
+        assert_eq!(
+            decoded,
+            Err(DecodeError(
+                "Not enough data to decode filename".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -128,7 +153,12 @@ mod tests {
 
         let decoder = super::RgbDecoder::new(buffer, bits_per_channel);
         let decoded = decoder.decode();
-        assert_eq!(decoded, Err("Not enough data to decode"));
+        assert_eq!(
+            decoded,
+            Err(DecodeError(
+                "Not enough data to decode data length".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -164,7 +194,10 @@ mod tests {
 
         let decoder = super::RgbDecoder::new(buffer, bits_per_channel);
         let decoded = decoder.decode();
-        assert_eq!(decoded, Err("Not enough data to decode"));
+        assert_eq!(
+            decoded,
+            Err(DecodeError("Not enough data to decode data".to_string()))
+        );
     }
 
     #[test]
@@ -273,10 +306,18 @@ mod tests {
         assert_eq!(String::from_utf8(data).unwrap(), "wolf");
     }
 
-    #[allow(dead_code)]
     fn fill_encoded(iter: &mut IterMut<u8>, bytes: &[u8]) {
         for &byte in bytes {
             *iter.next().unwrap() = byte;
         }
+    }
+
+    fn min_required_data(
+        filename_length: usize,
+        data_length: usize,
+        bits_per_channel: u8,
+    ) -> usize {
+        (4 + 4 + filename_length + data_length) * super::BITS_IN_BYTE as usize
+            / bits_per_channel as usize
     }
 }

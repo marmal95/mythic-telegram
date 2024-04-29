@@ -1,6 +1,6 @@
 use crate::coder::util::create_mask;
 
-use super::util::BITS_IN_BYTE;
+use super::{error::EncodeError, util::BITS_IN_BYTE};
 
 pub struct RgbEncoder {
     buffer: Vec<u8>,
@@ -23,9 +23,11 @@ impl RgbEncoder {
         }
     }
 
-    pub fn encode(mut self) -> Result<Vec<u8>, &'static str> {
+    pub fn encode(mut self) -> Result<Vec<u8>, EncodeError> {
         if self.bytes_to_encode() > self.max_bytes_to_encode() {
-            return Err("Too much data to encode in the image.");
+            return Err(EncodeError(
+                "Too much data to encode in the image.".to_string(),
+            ));
         }
 
         self.encode_file_name();
@@ -68,7 +70,7 @@ impl RgbEncoder {
     }
 
     fn max_bytes_to_encode(&self) -> usize {
-        (self.buffer.len() * self.bits_per_channel as usize) / 8
+        (self.buffer.len() * self.bits_per_channel as usize) / BITS_IN_BYTE as usize
     }
 
     fn bytes_to_encode(&self) -> usize {
@@ -82,22 +84,19 @@ impl RgbEncoder {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use std::slice::Iter;
 
+    use crate::coder::error::EncodeError;
+
     #[test]
     fn not_enough_buffer() {
-        let buffer = vec![0; 63];
         let data = "xyz".as_bytes();
         let bits_per_channel = 2;
         let file_name = "x.png";
-
-        // Needed buffer length:
-        //   4 (filename size)
-        // + 5 (filename)
-        // + 4 (message size)
-        // + 3 (data)
-        // = 16 (bytes) = 128 (bites) / 2 (bits_per_channel) = 64 needed channels/bytes
+        let buffer =
+            vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel) - 1];
 
         let encoder = super::RgbEncoder::new(
             buffer,
@@ -107,16 +106,18 @@ mod tests {
         );
         assert_eq!(
             encoder.encode(),
-            Err("Too much data to encode in the image.")
+            Err(EncodeError(
+                "Too much data to encode in the image.".to_string()
+            ))
         )
     }
 
     #[test]
     fn encode_2bits() {
-        let buffer = vec![0; 64];
         let data = "xyz".as_bytes();
-        let bits_per_channel = 2;
+        let bits_per_channel: u8 = 2;
         let file_name = "x.png";
+        let buffer = vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel)];
 
         let encoder = super::RgbEncoder::new(
             buffer,
@@ -189,10 +190,10 @@ mod tests {
 
     #[test]
     fn encode_4bits() {
-        let buffer = vec![0; 64];
         let data = "wolf".as_bytes();
         let bits_per_channel = 4;
         let file_name = "x.png";
+        let buffer = vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel)];
 
         let encoder = super::RgbEncoder::new(
             buffer,
@@ -241,10 +242,18 @@ mod tests {
         verify_encoded(&mut encoded_it, &[0b0000_0110, 0b0000_0110]);
     }
 
-    #[allow(dead_code)]
     fn verify_encoded(iter: &mut Iter<u8>, bytes: &[u8]) {
         for &byte in bytes {
             assert_eq!(*iter.next().unwrap(), byte);
         }
+    }
+
+    fn min_required_buffer(
+        filename_length: usize,
+        data_length: usize,
+        bits_per_channel: u8,
+    ) -> usize {
+        (4 + filename_length + 4 + data_length) * super::BITS_IN_BYTE as usize
+            / bits_per_channel as usize
     }
 }

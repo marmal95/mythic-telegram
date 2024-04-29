@@ -1,51 +1,70 @@
 use std::error::Error;
 
-use image::{DynamicImage, RgbImage, RgbaImage};
+use image::RgbaImage;
 
-use crate::config::{Algorithm, RgbAlgorithmConfig};
+use crate::config::Algorithm;
 
-use super::{alpha_encoder::AlphaEncoder, rgb_encoder::RgbEncoder};
+use super::{
+    alpha_encoder::AlphaEncoder, error::EncodeError, header::Header, header_encoder,
+    rgb_encoder::RgbEncoder,
+};
 
 pub fn encode(
     algorithm: &Algorithm,
-    image: &DynamicImage,
+    image: RgbaImage,
     data: Vec<u8>,
-    message_filename: String,
-) -> Result<DynamicImage, Box<dyn Error>> {
-    match algorithm {
-        Algorithm::Rgb(rgb_alg_config) => {
-            let encoded = encode_rgb(&rgb_alg_config, &image, data, message_filename)?;
-            Ok(DynamicImage::ImageRgb8(encoded))
-        }
-        Algorithm::Alpha => {
-            let encoded = encode_alpha(&image, data, message_filename)?;
-            Ok(DynamicImage::ImageRgba8(encoded))
-        }
+    secret_filename: String,
+) -> Result<RgbaImage, Box<dyn Error>> {
+    let (width, height) = image.dimensions();
+    let mut image_data = image.into_raw();
+
+    let header = create_header(algorithm);
+    let data_buffer = image_data.split_off(header.size() * 4);
+    header_encoder::encode(header.clone(), &mut image_data);
+
+    let encoder = create_encoder(algorithm, data_buffer, data, secret_filename);
+    let mut encoded = encoder.run()?;
+
+    image_data.append(&mut encoded);
+    Ok(RgbaImage::from_vec(width, height, image_data).unwrap())
+}
+
+trait Encode {
+    fn run(self: Box<Self>) -> Result<Vec<u8>, EncodeError>;
+}
+
+impl Encode for AlphaEncoder {
+    fn run(self: Box<Self>) -> Result<Vec<u8>, EncodeError> {
+        self.encode()
     }
 }
 
-fn encode_rgb(
-    config: &RgbAlgorithmConfig,
-    image: &DynamicImage,
-    buffer: Vec<u8>,
-    message_filename: String,
-) -> Result<RgbImage, Box<dyn Error>> {
-    let encoder = RgbEncoder::new(
-        image.to_rgb8().into_raw(),
-        buffer,
-        config.bits_per_channel,
-        message_filename,
-    );
-    let encoded = encoder.encode()?;
-    Ok(RgbImage::from_vec(image.width(), image.height(), encoded).unwrap())
+impl Encode for RgbEncoder {
+    fn run(self: Box<Self>) -> Result<Vec<u8>, EncodeError> {
+        self.encode()
+    }
 }
 
-fn encode_alpha(
-    image: &DynamicImage,
+fn create_header(algorithm: &Algorithm) -> Header {
+    match algorithm {
+        Algorithm::Alpha => Header::new_alpha(),
+        Algorithm::Rgb(alg_config) => Header::new_rgb(alg_config.bits_per_channel),
+    }
+}
+
+fn create_encoder(
+    algorithm: &Algorithm,
     buffer: Vec<u8>,
-    message_filename: String,
-) -> Result<RgbaImage, Box<dyn Error>> {
-    let encoder = AlphaEncoder::new(image.to_rgba8().into_raw(), buffer, message_filename);
-    let encoded = encoder.encode()?;
-    Ok(RgbaImage::from_vec(image.width(), image.height(), encoded).unwrap())
+    data: Vec<u8>,
+    secret_filename: String,
+) -> Box<dyn Encode> {
+    match algorithm {
+        Algorithm::Rgb(alg_config) => Box::new(RgbEncoder::new(
+            buffer,
+            data,
+            alg_config.bits_per_channel,
+            secret_filename,
+        )),
+        Algorithm::Alpha => Box::new(AlphaEncoder::new(buffer, data, secret_filename)),
+    }
 }
