@@ -1,6 +1,7 @@
-use crate::coder::util::{create_mask, BITS_IN_BYTE};
-
-use super::error::DecodeError;
+use crate::coder::{
+    error::DecodeError,
+    util::{create_mask, BITS_IN_BYTE},
+};
 
 pub struct RgbDecoder {
     buffer: Vec<u8>,

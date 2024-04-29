@@ -1,13 +1,16 @@
+mod alpha_decoder;
+mod header_decoder;
+mod rgb_decoder;
+
 use std::error::Error;
 
 use image::RgbaImage;
 
+use self::{alpha_decoder::AlphaDecoder, rgb_decoder::RgbDecoder};
+
 use super::{
-    alpha_decoder::AlphaDecoder,
     error::DecodeError,
     header::{AlgHeader, Header},
-    header_decoder,
-    rgb_decoder::RgbDecoder,
 };
 
 trait Decode {

@@ -1,6 +1,4 @@
-use crate::coder::header::AlgHeader;
-
-use super::header::{Header, RgbHeader};
+use crate::coder::header::{AlgHeader, Header, RgbHeader};
 
 pub fn encode(header: Header, buffer: &mut Vec<u8>) {
     let mut iter = buffer.iter_mut().skip(3).step_by(4);

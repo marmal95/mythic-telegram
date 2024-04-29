@@ -1,6 +1,6 @@
 use image::io::Reader as ImageReader;
 use mystic_telegram::{
-    coder::{decoder, encoder},
+    coder,
     config::{self, Config, DecodeConfig, EncodeConfig, Mode},
 };
 use std::{
@@ -21,7 +21,7 @@ fn encode(config: &EncodeConfig) -> Result<(), Box<dyn Error>> {
     let image = ImageReader::open(image_filename)?.decode()?;
     let encoded_filename = "encoded_".to_owned() + image_filename;
 
-    let encoded_image = encoder::encode(
+    let encoded_image = coder::encoder::encode(
         &config.algorithm,
         image.to_rgba8(),
         data_buffer,
@@ -36,7 +36,7 @@ fn decode(config: &DecodeConfig) -> Result<(), Box<dyn Error>> {
     let image_filename = config.image_file.to_str().unwrap();
     let image = ImageReader::open(image_filename)?.decode()?;
 
-    let (file_name, decoded_data) = decoder::decode(image.to_rgba8())?;
+    let (file_name, decoded_data) = coder::decoder::decode(image.to_rgba8())?;
 
     let mut data_file = File::create(file_name)?;
     data_file.write_all(&decoded_data)?;

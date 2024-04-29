@@ -1,4 +1,4 @@
-use super::error::DecodeError;
+use crate::coder::error::DecodeError;
 
 pub struct AlphaDecoder {
     buffer: Vec<u8>,

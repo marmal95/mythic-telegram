@@ -1,4 +1,4 @@
-use super::header::{AlgHeader, AlphaHeader, Header, RgbHeader, ALPHA_MODE, RGB_MODE};
+use crate::coder::header::{AlgHeader, AlphaHeader, Header, RgbHeader, ALPHA_MODE, RGB_MODE};
 
 pub fn decode(buffer: &Vec<u8>) -> Header {
     let mut iter = buffer.iter().skip(3).step_by(4);

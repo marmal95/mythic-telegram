@@ -1,13 +1,17 @@
+mod alpha_encoder;
+mod header_encoder;
+mod rgb_encoder;
+
 use std::error::Error;
 
 use image::RgbaImage;
 
-use crate::config::Algorithm;
-
-use super::{
-    alpha_encoder::AlphaEncoder, error::EncodeError, header::Header, header_encoder,
-    rgb_encoder::RgbEncoder,
+use crate::{
+    coder::{error::EncodeError, header::Header},
+    config::Algorithm,
 };
+
+use self::{alpha_encoder::AlphaEncoder, rgb_encoder::RgbEncoder};
 
 pub fn encode(
     algorithm: &Algorithm,
