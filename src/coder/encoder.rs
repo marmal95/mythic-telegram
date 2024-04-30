@@ -24,7 +24,7 @@ pub fn encode(
 
     let header = create_header(algorithm);
     let data_buffer = image_data.split_off(header.size() * 4);
-    header_encoder::encode(header.clone(), &mut image_data);
+    header_encoder::encode(header.clone(), &mut image_data)?;
 
     let encoder = create_encoder(algorithm, data_buffer, data, secret_filename);
     let mut encoded = encoder.run()?;

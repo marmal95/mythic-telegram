@@ -31,7 +31,7 @@ impl Decode for RgbDecoder {
 
 pub fn decode(image: RgbaImage) -> Result<(String, Vec<u8>), Box<dyn Error>> {
     let mut buffer = image.into_raw();
-    let header = header_decoder::decode(&buffer);
+    let header = header_decoder::decode(&buffer)?;
     let buffer = buffer.split_off(header.size() * 4);
 
     let decoder = create_decoder(&header, buffer);

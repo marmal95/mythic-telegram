@@ -15,7 +15,7 @@ impl AlphaDecoder {
         let file_name_length = self.decode_length();
 
         self.validate_data_available(file_name_length, "filename")?;
-        let file_name = String::from_utf8(self.decode_data(file_name_length)).unwrap();
+        let file_name = String::from_utf8(self.decode_data(file_name_length))?;
 
         self.validate_data_available(4, "data length")?;
         let data_length = self.decode_length();
