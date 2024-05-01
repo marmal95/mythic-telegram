@@ -6,7 +6,7 @@ use crate::coder::{
 pub fn decode(buffer: &Vec<u8>) -> Result<Header, HeaderDecodeError> {
     let mut iter = buffer.iter().skip(3).step_by(4);
     let mode = *iter.next().ok_or(HeaderDecodeError(
-        "Header decode error: Not enough data to decode mode.".to_string(),
+        "Not enough data to decode mode.".to_string(),
     ))?;
 
     let alg_header = decode_alg_header(mode, &mut iter)?;
@@ -75,7 +75,7 @@ mod tests {
         assert_eq!(
             decoded,
             Err(HeaderDecodeError(
-                "Header decode error: Not enough data to decode mode.".to_string()
+                "Not enough data to decode mode.".to_string()
             ))
         );
     }
@@ -87,7 +87,7 @@ mod tests {
         assert_eq!(
             decoded,
             Err(HeaderDecodeError(
-                "Header decode error: Not enough data to decode bits per channel.".to_string()
+                "Not enough data to decode bits per channel.".to_string()
             ))
         );
     }
