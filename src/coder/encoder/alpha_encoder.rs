@@ -1,23 +1,26 @@
+use std::{
+    iter::{Skip, StepBy},
+    slice::IterMut,
+};
+
 use crate::coder::error::EncodeError;
 
-pub struct AlphaEncoder {
-    buffer: Vec<u8>,
+pub struct AlphaEncoder<'a> {
+    buffer: StepBy<Skip<IterMut<'a, u8>>>,
     data: Vec<u8>,
-    index: usize,
     file_name: String,
 }
 
-impl AlphaEncoder {
-    pub fn new(buffer: Vec<u8>, data: Vec<u8>, file_name: String) -> Self {
+impl<'a> AlphaEncoder<'a> {
+    pub fn new(buffer: &'a mut Vec<u8>, data: Vec<u8>, file_name: String) -> Self {
         AlphaEncoder {
-            buffer,
+            buffer: buffer.iter_mut().skip(3).step_by(4),
             data,
-            index: 3,
             file_name,
         }
     }
 
-    pub fn encode(mut self) -> Result<Vec<u8>, EncodeError> {
+    pub fn encode(mut self) -> Result<(), EncodeError> {
         if self.bytes_to_encode() > self.max_bytes_to_encode() {
             return Err(EncodeError(
                 "Too much data to encode in the image.".to_string(),
@@ -27,7 +30,7 @@ impl AlphaEncoder {
         self.encode_file_name();
         self.encode_content();
 
-        Ok(self.buffer)
+        Ok(())
     }
 
     fn encode_file_name(&mut self) {
@@ -52,22 +55,16 @@ impl AlphaEncoder {
     }
 
     fn encode_byte(&mut self, byte: u8) {
-        let channel = self.next();
+        let channel = self.buffer.next().unwrap();
         *channel = byte;
     }
 
     fn max_bytes_to_encode(&self) -> usize {
-        self.buffer.len() / 4
+        self.buffer.len()
     }
 
     fn bytes_to_encode(&self) -> usize {
         self.data.len() + self.file_name.len() + 4 + 4
-    }
-
-    fn next(&mut self) -> &mut u8 {
-        let byte = &mut self.buffer[self.index];
-        self.index += 4;
-        byte
     }
 }
 
@@ -91,14 +88,15 @@ mod tests {
         let min_required_buffer = min_required_buffer(file_name.len(), data.len());
 
         {
-            let buffer = vec![0; min_required_buffer];
-            let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
+            let mut buffer = vec![0; min_required_buffer];
+            let encoder =
+                super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
             let encoded = encoder.encode();
             assert!(encoded.is_ok())
         }
 
-        let buffer = vec![0; min_required_buffer - 1];
-        let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
+        let mut buffer = vec![0; min_required_buffer - 1];
+        let encoder = super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
         assert_eq!(
             encoder.encode(),
             Err(EncodeError(
@@ -115,8 +113,9 @@ mod tests {
 
         {
             // Verify we use required minimum
-            let buffer = vec![0; min_bytes_required - 1];
-            let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
+            let mut buffer = vec![0; min_bytes_required - 1];
+            let encoder =
+                super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
             assert_eq!(
                 encoder.encode(),
                 Err(EncodeError(
@@ -125,10 +124,11 @@ mod tests {
             )
         }
 
-        let buffer = vec![0; min_bytes_required];
-        let encoder = super::AlphaEncoder::new(buffer, data.to_vec(), file_name.to_string());
-        let encoded = encoder.encode().unwrap();
-        let mut encoded_it = encoded.iter();
+        let mut buffer = vec![0; min_bytes_required];
+        let encoder = super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
+
+        assert!(encoder.encode().is_ok());
+        let mut encoded_it = buffer.iter();
 
         // Encoded layout:
         // Filename length = 4 bytes (encoded on 32 bits) = 0b00000000'00000000'00000000'00000101

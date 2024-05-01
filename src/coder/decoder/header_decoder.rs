@@ -33,7 +33,7 @@ where
     I: Iterator<Item = &'a u8>,
 {
     let bits_per_channel = *iter.next().ok_or(HeaderDecodeError(
-        "Header decode error: Not enough data to decode bits per channel.".to_string(),
+        "Not enough data to decode bits per channel.".to_string(),
     ))?;
 
     Ok(RgbHeader { bits_per_channel })

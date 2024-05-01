@@ -23,28 +23,28 @@ pub fn encode(
     let mut image_data = image.into_raw();
 
     let header = create_header(algorithm);
-    let data_buffer = image_data.split_off(header.size() * 4);
+    let mut data_buffer = image_data.split_off(header.size() * 4);
     header_encoder::encode(header.clone(), &mut image_data)?;
 
-    let encoder = create_encoder(algorithm, data_buffer, data, secret_filename);
-    let mut encoded = encoder.run()?;
+    let encoder = create_encoder(algorithm, &mut data_buffer, data, secret_filename);
+    encoder.run()?;
 
-    image_data.append(&mut encoded);
+    image_data.append(&mut data_buffer);
     Ok(RgbaImage::from_vec(width, height, image_data).unwrap())
 }
 
 trait Encode {
-    fn run(self: Box<Self>) -> Result<Vec<u8>, EncodeError>;
+    fn run(self: Box<Self>) -> Result<(), EncodeError>;
 }
 
-impl Encode for AlphaEncoder {
-    fn run(self: Box<Self>) -> Result<Vec<u8>, EncodeError> {
+impl<'a> Encode for AlphaEncoder<'a> {
+    fn run(self: Box<Self>) -> Result<(), EncodeError> {
         self.encode()
     }
 }
 
-impl Encode for RgbEncoder {
-    fn run(self: Box<Self>) -> Result<Vec<u8>, EncodeError> {
+impl<'a> Encode for RgbEncoder<'a> {
+    fn run(self: Box<Self>) -> Result<(), EncodeError> {
         self.encode()
     }
 }
@@ -56,12 +56,12 @@ fn create_header(algorithm: &Algorithm) -> Header {
     }
 }
 
-fn create_encoder(
+fn create_encoder<'a>(
     algorithm: &Algorithm,
-    buffer: Vec<u8>,
+    buffer: &'a mut Vec<u8>,
     data: Vec<u8>,
     secret_filename: String,
-) -> Box<dyn Encode> {
+) -> Box<dyn Encode + 'a> {
     match algorithm {
         Algorithm::Rgb(alg_config) => Box::new(RgbEncoder::new(
             buffer,

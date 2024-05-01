@@ -1,30 +1,35 @@
+use std::slice::IterMut;
+
 use crate::coder::{
     error::EncodeError,
     util::{create_mask, BITS_IN_BYTE},
 };
 
-pub struct RgbEncoder {
-    buffer: Vec<u8>,
+pub struct RgbEncoder<'a> {
+    buffer: IterMut<'a, u8>,
     data: Vec<u8>,
-    index: usize,
     bits_per_channel: u8,
     file_name: String,
     mask: u8,
 }
 
-impl RgbEncoder {
-    pub fn new(buffer: Vec<u8>, data: Vec<u8>, bits_per_channel: u8, file_name: String) -> Self {
+impl<'a> RgbEncoder<'a> {
+    pub fn new(
+        buffer: &'a mut Vec<u8>,
+        data: Vec<u8>,
+        bits_per_channel: u8,
+        file_name: String,
+    ) -> Self {
         RgbEncoder {
-            buffer,
+            buffer: buffer.iter_mut(),
             data,
-            index: 0,
             bits_per_channel,
             file_name,
             mask: create_mask(bits_per_channel),
         }
     }
 
-    pub fn encode(mut self) -> Result<Vec<u8>, EncodeError> {
+    pub fn encode(mut self) -> Result<(), EncodeError> {
         if self.bytes_to_encode() > self.max_bytes_to_encode() {
             return Err(EncodeError(
                 "Too much data to encode in the image.".to_string(),
@@ -34,7 +39,7 @@ impl RgbEncoder {
         self.encode_file_name();
         self.encode_content();
 
-        Ok(self.buffer)
+        Ok(())
     }
 
     fn encode_file_name(&mut self) {
@@ -64,7 +69,7 @@ impl RgbEncoder {
 
         while shift >= 0 {
             let bits = (byte >> shift) & mask;
-            let channel = self.next();
+            let channel = self.buffer.next().unwrap();
             *channel = (*channel & !mask) | bits;
             shift = shift - (self.bits_per_channel as i32);
         }
@@ -76,12 +81,6 @@ impl RgbEncoder {
 
     fn bytes_to_encode(&self) -> usize {
         self.data.len() + self.file_name.len() + 4 + 4
-    }
-
-    fn next(&mut self) -> &mut u8 {
-        let byte = &mut self.buffer[self.index];
-        self.index += 1;
-        byte
     }
 }
 
@@ -96,11 +95,11 @@ mod tests {
         let data = "xyz".as_bytes();
         let bits_per_channel = 2;
         let file_name = "x.png";
-        let buffer =
+        let mut buffer =
             vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel) - 1];
 
         let encoder = super::RgbEncoder::new(
-            buffer,
+            &mut buffer,
             data.to_vec(),
             bits_per_channel,
             file_name.to_string(),
@@ -118,16 +117,17 @@ mod tests {
         let data = "xyz".as_bytes();
         let bits_per_channel: u8 = 2;
         let file_name = "x.png";
-        let buffer = vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel)];
+        let mut buffer =
+            vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel)];
 
         let encoder = super::RgbEncoder::new(
-            buffer,
+            &mut buffer,
             data.to_vec(),
             bits_per_channel,
             file_name.to_string(),
         );
-        let encoded = encoder.encode().unwrap();
-        let mut encoded_it = encoded.iter();
+        assert!(encoder.encode().is_ok());
+        let mut encoded_it = buffer.iter();
 
         // Encoded layout:
         // Filename length = 4 bytes (encoded on 32 bits) = 0b00000000'00000000'00000000'00000101
@@ -194,16 +194,17 @@ mod tests {
         let data = "wolf".as_bytes();
         let bits_per_channel = 4;
         let file_name = "x.png";
-        let buffer = vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel)];
+        let mut buffer =
+            vec![0; min_required_buffer(file_name.len(), data.len(), bits_per_channel)];
 
         let encoder = super::RgbEncoder::new(
-            buffer,
+            &mut buffer,
             data.to_vec(),
             bits_per_channel,
             file_name.to_string(),
         );
-        let encoded = encoder.encode().unwrap();
-        let mut encoded_it = encoded.iter();
+        assert!(encoder.encode().is_ok());
+        let mut encoded_it = buffer.iter();
 
         // Encoded layout:
         // Filename length = 4 bytes (encoded on 32 bits) = 0b00000000'00000000'00000000'00000101

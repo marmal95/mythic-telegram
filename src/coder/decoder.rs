@@ -17,13 +17,13 @@ trait Decode {
     fn run(self: Box<Self>) -> Result<(String, Vec<u8>), DecodeError>;
 }
 
-impl Decode for AlphaDecoder {
+impl<'a> Decode for AlphaDecoder<'a> {
     fn run(self: Box<Self>) -> Result<(String, Vec<u8>), DecodeError> {
         self.decode()
     }
 }
 
-impl Decode for RgbDecoder {
+impl<'a> Decode for RgbDecoder<'a> {
     fn run(self: Box<Self>) -> Result<(String, Vec<u8>), DecodeError> {
         self.decode()
     }
@@ -32,14 +32,14 @@ impl Decode for RgbDecoder {
 pub fn decode(image: RgbaImage) -> Result<(String, Vec<u8>), Box<dyn Error>> {
     let mut buffer = image.into_raw();
     let header = header_decoder::decode(&buffer)?;
-    let buffer = buffer.split_off(header.size() * 4);
+    let mut buffer = buffer.split_off(header.size() * 4);
 
-    let decoder = create_decoder(&header, buffer);
+    let decoder = create_decoder(&header, &mut buffer);
     let decoded = decoder.run()?;
     Ok(decoded)
 }
 
-fn create_decoder(header: &Header, buffer: Vec<u8>) -> Box<dyn Decode> {
+fn create_decoder<'a>(header: &Header, buffer: &'a Vec<u8>) -> Box<dyn Decode + 'a> {
     match &header.alg_header {
         AlgHeader::Alpha(_) => Box::new(AlphaDecoder::new(buffer)),
         AlgHeader::Rgb(rgb_header) => {
