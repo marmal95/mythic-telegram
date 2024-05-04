@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use image::RgbaImage;
-    use mystic_telegram::{
+    use mythic_telegram::{
         coder::{decoder, encoder},
         config::{Algorithm, RgbAlgorithmConfig},
     };

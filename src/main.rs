@@ -1,5 +1,5 @@
 use image::io::Reader as ImageReader;
-use mystic_telegram::{
+use mythic_telegram::{
     coder,
     config::{self, Config, DecodeConfig, EncodeConfig, Mode},
 };

@@ -16,12 +16,12 @@ The following coding algoritms/modes are supported:
 ### Encode
 To encode data using <b>alpha</b> mode:
 ```lua
-mystic-telegram encode --image-file <IMAGE_FILE> --secret-file <SECRET_FILE> alpha
+mythic-telegram encode --image-file <IMAGE_FILE> --secret-file <SECRET_FILE> alpha
 ```
 
 To encode data using <b>rgb</b> mode:
 ```lua
-mystic-telegram encode --image-file <IMAGE_FILE> --secret-file <SECRET_FILE> rgb --bits-per-channel <1/2/3/4>
+mythic-telegram encode --image-file <IMAGE_FILE> --secret-file <SECRET_FILE> rgb --bits-per-channel <1/2/3/4>
 ```
 
 where:
@@ -32,5 +32,5 @@ where:
 ### Decode
 To decode data:
 ```lua
-mystic-telegram decode --image-file <IMAGE_FILE>
+mythic-telegram decode --image-file <IMAGE_FILE>
 ```
