@@ -1,4 +1,5 @@
 mod alpha_decoder;
+mod decode;
 mod header_decoder;
 mod rgb_decoder;
 
@@ -6,28 +7,9 @@ use std::error::Error;
 
 use image::RgbaImage;
 
-use self::{alpha_decoder::AlphaDecoder, rgb_decoder::RgbDecoder};
+use self::{alpha_decoder::AlphaDecoder, decode::Decode, rgb_decoder::RgbDecoder};
 
-use super::{
-    error::DecodeError,
-    header::{AlgHeader, Header},
-};
-
-trait Decode {
-    fn run(self: Box<Self>) -> Result<(String, Vec<u8>), DecodeError>;
-}
-
-impl<'a> Decode for AlphaDecoder<'a> {
-    fn run(self: Box<Self>) -> Result<(String, Vec<u8>), DecodeError> {
-        self.decode()
-    }
-}
-
-impl<'a> Decode for RgbDecoder<'a> {
-    fn run(self: Box<Self>) -> Result<(String, Vec<u8>), DecodeError> {
-        self.decode()
-    }
-}
+use super::header::{AlgHeader, Header};
 
 pub fn decode(image: RgbaImage) -> Result<(String, Vec<u8>), Box<dyn Error>> {
     let mut buffer = image.into_raw();
@@ -35,7 +17,7 @@ pub fn decode(image: RgbaImage) -> Result<(String, Vec<u8>), Box<dyn Error>> {
     let mut buffer = buffer.split_off(header.size() * 4);
 
     let decoder = create_decoder(&header, &mut buffer);
-    let decoded = decoder.run()?;
+    let decoded = decoder.decode()?;
     Ok(decoded)
 }
 

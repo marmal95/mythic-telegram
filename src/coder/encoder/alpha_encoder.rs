@@ -3,7 +3,7 @@ use std::{
     slice::IterMut,
 };
 
-use crate::coder::error::EncodeError;
+use super::Encode;
 
 pub struct AlphaEncoder<'a> {
     buffer: StepBy<Skip<IterMut<'a, u8>>>,
@@ -19,41 +19,9 @@ impl<'a> AlphaEncoder<'a> {
             file_name,
         }
     }
+}
 
-    pub fn encode(mut self) -> Result<(), EncodeError> {
-        if self.bytes_to_encode() > self.max_bytes_to_encode() {
-            return Err(EncodeError(
-                "Too much data to encode in the image.".to_string(),
-            ));
-        }
-
-        self.encode_file_name();
-        self.encode_content();
-
-        Ok(())
-    }
-
-    fn encode_file_name(&mut self) {
-        self.encode_length(self.file_name.len() as u32);
-        self.encode_data(self.file_name.clone().as_bytes().to_vec());
-    }
-
-    fn encode_content(&mut self) {
-        self.encode_length(self.data.len() as u32);
-        self.encode_data(self.data.clone());
-    }
-
-    fn encode_length(&mut self, length: u32) {
-        length
-            .to_be_bytes()
-            .into_iter()
-            .for_each(|byte| self.encode_byte(byte));
-    }
-
-    fn encode_data(&mut self, data: Vec<u8>) {
-        data.iter().for_each(|byte| self.encode_byte(*byte));
-    }
-
+impl<'a> Encode for AlphaEncoder<'a> {
     fn encode_byte(&mut self, byte: u8) {
         let channel = self.buffer.next().unwrap();
         *channel = byte;
@@ -66,13 +34,23 @@ impl<'a> AlphaEncoder<'a> {
     fn bytes_to_encode(&self) -> usize {
         self.data.len() + self.file_name.len() + 4 + 4
     }
+
+    fn file_name_bytes(&self) -> Vec<u8> {
+        self.file_name.as_bytes().to_vec()
+    }
+
+    fn data_bytes(&self) -> Vec<u8> {
+        self.data.clone()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::slice::Iter;
 
-    use crate::coder::error::EncodeError;
+    use crate::coder::{encoder::Encode, error::EncodeError};
+
+    use super::AlphaEncoder;
 
     #[test]
     fn not_enough_buffer() {
@@ -89,14 +67,13 @@ mod tests {
 
         {
             let mut buffer = vec![0; min_required_buffer];
-            let encoder =
-                super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
+            let encoder = create_encoder(&mut buffer, data.to_vec(), file_name.to_string());
             let encoded = encoder.encode();
             assert!(encoded.is_ok())
         }
 
         let mut buffer = vec![0; min_required_buffer - 1];
-        let encoder = super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
+        let encoder = create_encoder(&mut buffer, data.to_vec(), file_name.to_string());
         assert_eq!(
             encoder.encode(),
             Err(EncodeError(
@@ -114,8 +91,7 @@ mod tests {
         {
             // Verify we use required minimum
             let mut buffer = vec![0; min_bytes_required - 1];
-            let encoder =
-                super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
+            let encoder = create_encoder(&mut buffer, data.to_vec(), file_name.to_string());
             assert_eq!(
                 encoder.encode(),
                 Err(EncodeError(
@@ -125,7 +101,7 @@ mod tests {
         }
 
         let mut buffer = vec![0; min_bytes_required];
-        let encoder = super::AlphaEncoder::new(&mut buffer, data.to_vec(), file_name.to_string());
+        let encoder = create_encoder(&mut buffer, data.to_vec(), file_name.to_string());
 
         assert!(encoder.encode().is_ok());
         let mut encoded_it = buffer.iter();
@@ -159,6 +135,14 @@ mod tests {
             &mut encoded_it,
             &[0b0111_0111, 0b0110_1111, 0b0110_1100, 0b0110_0110],
         );
+    }
+
+    fn create_encoder<'a>(
+        buffer: &'a mut Vec<u8>,
+        data: Vec<u8>,
+        file_name: String,
+    ) -> Box<dyn Encode + 'a> {
+        Box::new(AlphaEncoder::new(buffer, data, file_name))
     }
 
     fn verify_encoded(iter: &mut Iter<u8>, bytes: &[u8]) {

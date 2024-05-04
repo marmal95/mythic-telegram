@@ -1,4 +1,5 @@
 mod alpha_encoder;
+mod encode;
 mod header_encoder;
 mod rgb_encoder;
 
@@ -6,12 +7,9 @@ use std::error::Error;
 
 use image::RgbaImage;
 
-use crate::{
-    coder::{error::EncodeError, header::Header},
-    config::Algorithm,
-};
+use crate::{coder::header::Header, config::Algorithm};
 
-use self::{alpha_encoder::AlphaEncoder, rgb_encoder::RgbEncoder};
+use self::{alpha_encoder::AlphaEncoder, encode::Encode, rgb_encoder::RgbEncoder};
 
 pub fn encode(
     algorithm: &Algorithm,
@@ -26,27 +24,10 @@ pub fn encode(
     let mut data_buffer = image_data.split_off(header.size() * 4);
     header_encoder::encode(header.clone(), &mut image_data)?;
 
-    let encoder = create_encoder(algorithm, &mut data_buffer, data, secret_filename);
-    encoder.run()?;
+    create_encoder(algorithm, &mut data_buffer, data, secret_filename).encode()?;
 
     image_data.append(&mut data_buffer);
     Ok(RgbaImage::from_vec(width, height, image_data).unwrap())
-}
-
-trait Encode {
-    fn run(self: Box<Self>) -> Result<(), EncodeError>;
-}
-
-impl<'a> Encode for AlphaEncoder<'a> {
-    fn run(self: Box<Self>) -> Result<(), EncodeError> {
-        self.encode()
-    }
-}
-
-impl<'a> Encode for RgbEncoder<'a> {
-    fn run(self: Box<Self>) -> Result<(), EncodeError> {
-        self.encode()
-    }
 }
 
 fn create_header(algorithm: &Algorithm) -> Header {

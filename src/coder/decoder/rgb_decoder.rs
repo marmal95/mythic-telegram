@@ -1,9 +1,8 @@
 use std::slice::Iter;
 
-use crate::coder::{
-    error::DecodeError,
-    util::{create_mask, BITS_IN_BYTE},
-};
+use crate::coder::util::{create_mask, BITS_IN_BYTE};
+
+use super::decode::Decode;
 
 pub struct RgbDecoder<'a> {
     buffer: Iter<'a, u8>,
@@ -19,41 +18,9 @@ impl<'a> RgbDecoder<'a> {
             mask: create_mask(bits_per_channel),
         }
     }
+}
 
-    pub fn decode(mut self) -> Result<(String, Vec<u8>), DecodeError> {
-        let file_name_length = self
-            .decode_length()
-            .ok_or(self.not_available("filename length"))?;
-
-        let file_name = self
-            .decode_data(file_name_length)
-            .ok_or(self.not_available("filename"))?;
-        let file_name = String::from_utf8(file_name)?;
-
-        let data_length = self
-            .decode_length()
-            .ok_or(self.not_available("data length"))?;
-
-        let data = self
-            .decode_data(data_length)
-            .ok_or(self.not_available("data"))?;
-
-        Ok((file_name, data))
-    }
-
-    fn decode_length(&mut self) -> Option<usize> {
-        Some(u32::from_be_bytes([
-            self.decode_byte()?,
-            self.decode_byte()?,
-            self.decode_byte()?,
-            self.decode_byte()?,
-        ]) as usize)
-    }
-
-    fn decode_data(&mut self, length: usize) -> Option<Vec<u8>> {
-        (0..length).map(|_| self.decode_byte()).collect()
-    }
-
+impl<'a> Decode for RgbDecoder<'a> {
     fn decode_byte(&mut self) -> Option<u8> {
         let mut byte: u8 = 0;
         let mut left = BITS_IN_BYTE;
@@ -69,24 +36,20 @@ impl<'a> RgbDecoder<'a> {
 
         Some(byte)
     }
-
-    fn not_available(&self, data_to_check: &str) -> DecodeError {
-        DecodeError(format!("Not enough data to decode {data_to_check}"))
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::slice::IterMut;
 
-    use crate::coder::error::DecodeError;
+    use crate::coder::{decoder::decode::Decode, error::DecodeError};
 
     #[test]
     fn not_enough_data_to_decode_filename_length() {
         let bits_per_channel: u8 = 4;
         let buffer = vec![0; 1];
 
-        let decoder = super::RgbDecoder::new(&buffer, bits_per_channel);
+        let decoder = create_decoder(&buffer, bits_per_channel);
         let decoded = decoder.decode();
 
         assert_eq!(
@@ -113,7 +76,7 @@ mod tests {
         fill_encoded(&mut iter, &[0; 7]);
         fill_encoded(&mut iter, &[filename_length as u8]);
 
-        let decoder = super::RgbDecoder::new(&buffer, bits_per_channel);
+        let decoder = create_decoder(&buffer, bits_per_channel);
         let decoded = decoder.decode();
         assert_eq!(
             decoded,
@@ -136,7 +99,7 @@ mod tests {
         fill_encoded(&mut iter, &[0; 14]);
         fill_encoded(&mut iter, &[0b0000_0011, 0b0000_0000]); // 1100 = 12
 
-        let decoder = super::RgbDecoder::new(&buffer, bits_per_channel);
+        let decoder = create_decoder(&buffer, bits_per_channel);
         let decoded = decoder.decode();
         assert_eq!(
             decoded,
@@ -177,7 +140,7 @@ mod tests {
         fill_encoded(&mut iter, &[0; 7]);
         fill_encoded(&mut iter, &[data_length as u8]);
 
-        let decoder = super::RgbDecoder::new(&buffer, bits_per_channel);
+        let decoder = create_decoder(&buffer, bits_per_channel);
         let decoded = decoder.decode();
         assert_eq!(
             decoded,
@@ -242,7 +205,7 @@ mod tests {
             &[0b0000_0001, 0b0000_0011, 0b0000_0010, 0b0000_0010],
         );
 
-        let decoder = super::RgbDecoder::new(&buffer, bits_per_channel);
+        let decoder = create_decoder(&buffer, bits_per_channel);
         let (filename, data) = decoder.decode().unwrap();
 
         assert_eq!(filename, "x.png");
@@ -284,11 +247,15 @@ mod tests {
         // f = 0110 0110
         fill_encoded(&mut iter, &[0b0000_0110, 0b0000_0110]);
 
-        let decoder = super::RgbDecoder::new(&buffer, bits_per_channel);
+        let decoder = create_decoder(&buffer, bits_per_channel);
         let (filename, data) = decoder.decode().unwrap();
 
         assert_eq!(filename, "x.png");
         assert_eq!(String::from_utf8(data).unwrap(), "wolf");
+    }
+
+    fn create_decoder<'a>(buffer: &'a Vec<u8>, bits_per_channel: u8) -> Box<dyn Decode + 'a> {
+        Box::new(super::RgbDecoder::new(buffer, bits_per_channel))
     }
 
     fn fill_encoded(iter: &mut IterMut<u8>, bytes: &[u8]) {
