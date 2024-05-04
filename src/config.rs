@@ -20,7 +20,7 @@ pub struct EncodeConfig {
     pub image_file: std::path::PathBuf,
 
     #[arg(short, long, help = "Path to data file to be hidden.")]
-    pub message_file: std::path::PathBuf,
+    pub secret_file: std::path::PathBuf,
 
     #[command(subcommand)]
     pub algorithm: Algorithm,
@@ -43,9 +43,9 @@ pub struct RgbAlgorithmConfig {
     #[arg(
         short,
         long,
-        value_name = "1/2/4/8",
+        value_name = "1/2/4",
         help = "Number of bits to be used per channel.",
-        value_parser = clap::builder::PossibleValuesParser::new(["1", "2", "4", "8"]).map(|s| s.parse::<u8>().unwrap())
+        value_parser = clap::builder::PossibleValuesParser::new(["1", "2", "4"]).map(|s| s.parse::<u8>().unwrap())
     )]
     pub bits_per_channel: u8,
 }

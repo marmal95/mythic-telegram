@@ -11,7 +11,7 @@ use std::{
 
 fn encode(config: &EncodeConfig) -> Result<(), Box<dyn Error>> {
     let image_filename = config.image_file.to_str().unwrap();
-    let secret_filename = config.message_file.to_str().unwrap();
+    let secret_filename = config.secret_file.to_str().unwrap();
 
     let mut secret_file = File::open(secret_filename)?;
 
