@@ -3,7 +3,7 @@ use crate::coder::{
     header::{AlgHeader, AlphaHeader, Header, RgbHeader, ALPHA_MODE, RGB_MODE},
 };
 
-pub fn decode(buffer: &Vec<u8>) -> Result<Header, HeaderDecodeError> {
+pub fn decode(buffer: &[u8]) -> Result<Header, HeaderDecodeError> {
     let mut iter = buffer.iter().skip(3).step_by(4);
     let mode = *iter.next().ok_or(HeaderDecodeError(
         "Not enough data to decode mode.".to_string(),

@@ -14,7 +14,7 @@ pub struct RgbEncoder<'a> {
 
 impl<'a> RgbEncoder<'a> {
     pub fn new(
-        buffer: &'a mut Vec<u8>,
+        buffer: &'a mut [u8],
         data: Vec<u8>,
         bits_per_channel: u8,
         file_name: String,
@@ -38,7 +38,7 @@ impl<'a> Encode for RgbEncoder<'a> {
             let bits = (byte >> shift) & mask;
             let channel = self.buffer.next().unwrap();
             *channel = (*channel & !mask) | bits;
-            shift = shift - (self.bits_per_channel as i32);
+            shift -= self.bits_per_channel as i32;
         }
     }
 

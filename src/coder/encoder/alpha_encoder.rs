@@ -12,7 +12,7 @@ pub struct AlphaEncoder<'a> {
 }
 
 impl<'a> AlphaEncoder<'a> {
-    pub fn new(buffer: &'a mut Vec<u8>, data: Vec<u8>, file_name: String) -> Self {
+    pub fn new(buffer: &'a mut [u8], data: Vec<u8>, file_name: String) -> Self {
         AlphaEncoder {
             buffer: buffer.iter_mut().skip(3).step_by(4),
             data,

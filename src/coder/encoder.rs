@@ -39,7 +39,7 @@ fn create_header(algorithm: &Algorithm) -> Header {
 
 fn create_encoder<'a>(
     algorithm: &Algorithm,
-    buffer: &'a mut Vec<u8>,
+    buffer: &'a mut [u8],
     data: Vec<u8>,
     secret_filename: String,
 ) -> Box<dyn Encode + 'a> {

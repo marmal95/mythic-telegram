@@ -11,7 +11,7 @@ pub struct RgbDecoder<'a> {
 }
 
 impl<'a> RgbDecoder<'a> {
-    pub fn new(buffer: &'a Vec<u8>, bits_per_channel: u8) -> Self {
+    pub fn new(buffer: &'a [u8], bits_per_channel: u8) -> Self {
         RgbDecoder {
             buffer: buffer.iter(),
             bits_per_channel,

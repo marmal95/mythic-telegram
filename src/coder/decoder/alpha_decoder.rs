@@ -10,7 +10,7 @@ pub struct AlphaDecoder<'a> {
 }
 
 impl<'a> AlphaDecoder<'a> {
-    pub fn new(buffer: &'a Vec<u8>) -> Self {
+    pub fn new(buffer: &'a [u8]) -> Self {
         Self {
             iter: buffer.iter().skip(3).step_by(4),
         }

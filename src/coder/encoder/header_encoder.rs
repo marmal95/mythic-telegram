@@ -3,7 +3,7 @@ use crate::coder::{
     header::{AlgHeader, Header, RgbHeader},
 };
 
-pub fn encode(header: Header, buffer: &mut Vec<u8>) -> Result<(), HeaderEncodeError> {
+pub fn encode(header: Header, buffer: &mut [u8]) -> Result<(), HeaderEncodeError> {
     let mut iter = buffer.iter_mut().skip(3).step_by(4);
     let mode_byte = iter.next().ok_or(HeaderEncodeError(
         "Not enough to encode header mode.".to_string(),
