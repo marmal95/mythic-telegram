@@ -1,7 +1,7 @@
 use anyhow::Result;
 use image::{io::Reader as ImageReader, GenericImageView, RgbaImage};
 use mythic_telegram::{
-    coder,
+    coder::{decoder, encoder},
     config::{self, Config, DecodeConfig, EncodeConfig, Mode},
     file,
 };
@@ -14,7 +14,7 @@ fn encode(config: &EncodeConfig) -> Result<()> {
     let image = ImageReader::open(image_path)?.decode()?;
     let (image_width, image_height) = image.dimensions();
 
-    let encoded_data = coder::encoder::encode(
+    let encoded_data = encoder::encode(
         &config.algorithm,
         image.to_rgba8().into_vec(),
         file::read_bytes(&config.secret_file)?,
@@ -32,7 +32,7 @@ fn decode(config: &DecodeConfig) -> Result<()> {
     let image = ImageReader::open(image_path)?.decode()?;
     let image_data = image.to_rgba8().into_vec();
 
-    let (file_name, decoded_data) = coder::decoder::decode(image_data)?;
+    let (file_name, decoded_data) = decoder::decode(image_data)?;
     let secret_file_path = image_path.with_file_name(file_name);
     file::write_bytes(&secret_file_path, &decoded_data)
 }

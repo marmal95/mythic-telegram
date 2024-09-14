@@ -8,7 +8,7 @@ pub trait Decode {
             .decode_length()
             .ok_or(self.not_available("filename length"))?;
 
-        let file_name = self
+        let file_name: Vec<u8> = self
             .decode_data(file_name_length)
             .ok_or(self.not_available("filename"))?;
         let file_name = String::from_utf8(file_name)?;

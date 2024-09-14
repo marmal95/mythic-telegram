@@ -75,11 +75,13 @@ mod tests {
         let mut buffer = vec![0; min_required_buffer - 1];
         let encoder = create_encoder(&mut buffer, data.to_vec(), file_name.to_string());
         assert_eq!(
-            encoder.encode(),
-            Err(EncodeError(
-                "Too much data to encode in the image.".to_string()
-            ))
-        )
+            encoder
+                .encode()
+                .unwrap_err()
+                .downcast::<EncodeError>()
+                .unwrap(),
+            EncodeError("Too much data to encode in the image.".to_string())
+        );
     }
 
     #[test]
@@ -93,11 +95,13 @@ mod tests {
             let mut buffer = vec![0; min_bytes_required - 1];
             let encoder = create_encoder(&mut buffer, data.to_vec(), file_name.to_string());
             assert_eq!(
-                encoder.encode(),
-                Err(EncodeError(
-                    "Too much data to encode in the image.".to_string()
-                ))
-            )
+                encoder
+                    .encode()
+                    .unwrap_err()
+                    .downcast::<EncodeError>()
+                    .unwrap(),
+                EncodeError("Too much data to encode in the image.".to_string())
+            );
         }
 
         let mut buffer = vec![0; min_bytes_required];

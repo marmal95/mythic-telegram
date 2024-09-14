@@ -1,9 +1,11 @@
+use anyhow::{anyhow, Result};
+
 use crate::coder::{
     error::HeaderDecodeError,
     header::{AlgHeader, AlphaHeader, Header, RgbHeader, ALPHA_MODE, RGB_MODE},
 };
 
-pub fn decode(buffer: &[u8]) -> Result<Header, HeaderDecodeError> {
+pub fn decode(buffer: &[u8]) -> Result<Header> {
     let mut iter = buffer.iter().skip(3).step_by(4);
     let mode = *iter.next().ok_or(HeaderDecodeError(
         "Not enough data to decode mode.".to_string(),
@@ -13,14 +15,16 @@ pub fn decode(buffer: &[u8]) -> Result<Header, HeaderDecodeError> {
     Ok(Header::new(mode, alg_header))
 }
 
-fn decode_alg_header<'a, I>(mode: u8, iter: &mut I) -> Result<AlgHeader, HeaderDecodeError>
+fn decode_alg_header<'a, I>(mode: u8, iter: &mut I) -> Result<AlgHeader>
 where
     I: Iterator<Item = &'a u8>,
 {
     match mode {
         ALPHA_MODE => Ok(AlgHeader::Alpha(decode_alpha())),
         RGB_MODE => Ok(AlgHeader::Rgb(decode_rgb(iter)?)),
-        _ => Err(HeaderDecodeError("Unknown mode in header.".to_string())),
+        _ => Err(anyhow!(HeaderDecodeError(
+            "Unknown mode in header.".to_string()
+        ))),
     }
 }
 
@@ -28,7 +32,7 @@ fn decode_alpha() -> AlphaHeader {
     AlphaHeader {}
 }
 
-fn decode_rgb<'a, I>(iter: &mut I) -> Result<RgbHeader, HeaderDecodeError>
+fn decode_rgb<'a, I>(iter: &mut I) -> Result<RgbHeader>
 where
     I: Iterator<Item = &'a u8>,
 {
@@ -73,10 +77,11 @@ mod tests {
         let buffer = Vec::new();
         let decoded = super::decode(&buffer);
         assert_eq!(
-            decoded,
-            Err(HeaderDecodeError(
-                "Not enough data to decode mode.".to_string()
-            ))
+            decoded
+                .unwrap_err()
+                .downcast::<HeaderDecodeError>()
+                .unwrap(),
+            HeaderDecodeError("Not enough data to decode mode.".to_string())
         );
     }
 
@@ -85,10 +90,11 @@ mod tests {
         let buffer = vec![0, 0, 0, RGB_MODE];
         let decoded = super::decode(&buffer);
         assert_eq!(
-            decoded,
-            Err(HeaderDecodeError(
-                "Not enough data to decode bits per channel.".to_string()
-            ))
+            decoded
+                .unwrap_err()
+                .downcast::<HeaderDecodeError>()
+                .unwrap(),
+            HeaderDecodeError("Not enough data to decode bits per channel.".to_string())
         );
     }
 
@@ -101,8 +107,11 @@ mod tests {
 
         let decoded = super::decode(&buffer);
         assert_eq!(
-            decoded,
-            Err(HeaderDecodeError("Unknown mode in header.".to_string()))
+            decoded
+                .unwrap_err()
+                .downcast::<HeaderDecodeError>()
+                .unwrap(),
+            HeaderDecodeError("Unknown mode in header.".to_string())
         );
     }
 }

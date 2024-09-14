@@ -82,11 +82,13 @@ mod tests {
             file_name.to_string(),
         );
         assert_eq!(
-            encoder.encode(),
-            Err(EncodeError(
-                "Too much data to encode in the image.".to_string()
-            ))
-        )
+            encoder
+                .encode()
+                .unwrap_err()
+                .downcast::<EncodeError>()
+                .unwrap(),
+            EncodeError("Too much data to encode in the image.".to_string())
+        );
     }
 
     #[test]

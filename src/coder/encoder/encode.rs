@@ -1,7 +1,9 @@
+use anyhow::{anyhow, Result};
+
 use crate::coder::error::EncodeError;
 
 pub trait Encode {
-    fn encode(mut self: Box<Self>) -> Result<(), EncodeError> {
+    fn encode(mut self: Box<Self>) -> Result<()> {
         self.validate()?;
 
         let file_name = self.file_name_bytes();
@@ -15,11 +17,11 @@ pub trait Encode {
         Ok(())
     }
 
-    fn validate(&self) -> Result<(), EncodeError> {
+    fn validate(&self) -> Result<()> {
         if self.bytes_to_encode() > self.max_bytes_to_encode() {
-            return Err(EncodeError(
+            return Err(anyhow!(EncodeError(
                 "Too much data to encode in the image.".to_string(),
-            ));
+            )));
         }
         Ok(())
     }

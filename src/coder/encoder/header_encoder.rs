@@ -1,9 +1,11 @@
+use anyhow::Result;
+
 use crate::coder::{
     error::HeaderEncodeError,
     header::{AlgHeader, Header, RgbHeader},
 };
 
-pub fn encode(header: Header, buffer: &mut [u8]) -> Result<(), HeaderEncodeError> {
+pub fn encode(header: Header, buffer: &mut [u8]) -> Result<()> {
     let mut iter = buffer.iter_mut().skip(3).step_by(4);
     let mode_byte = iter.next().ok_or(HeaderEncodeError(
         "Not enough to encode header mode.".to_string(),
@@ -18,14 +20,14 @@ pub fn encode(header: Header, buffer: &mut [u8]) -> Result<(), HeaderEncodeError
     Ok(())
 }
 
-fn encode_alpha<'a, I>(_iter: &mut I) -> Result<(), HeaderEncodeError>
+fn encode_alpha<'a, I>(_iter: &mut I) -> Result<()>
 where
     I: Iterator<Item = &'a mut u8>,
 {
     Ok(())
 }
 
-fn encode_rgb<'a, I>(iter: &mut I, header: &RgbHeader) -> Result<(), HeaderEncodeError>
+fn encode_rgb<'a, I>(iter: &mut I, header: &RgbHeader) -> Result<()>
 where
     I: Iterator<Item = &'a mut u8>,
 {
@@ -38,7 +40,6 @@ where
 
 #[cfg(test)]
 mod tests {
-
     use crate::coder::{
         error::HeaderEncodeError,
         header::{Header, ALPHA_MODE, RGB_MODE},
@@ -48,7 +49,7 @@ mod tests {
     fn encode_alpha() {
         let header = Header::new_alpha();
         let mut buffer = vec![0; 10];
-        assert_eq!(Ok(()), super::encode(header, &mut buffer));
+        assert!(super::encode(header, &mut buffer).is_ok());
         assert_eq!(buffer, vec![0, 0, 0, ALPHA_MODE, 0, 0, 0, 0, 0, 0]);
     }
 
@@ -57,7 +58,7 @@ mod tests {
         let bits_per_channel = 4;
         let header = Header::new_rgb(bits_per_channel);
         let mut buffer = vec![0; 10];
-        assert_eq!(Ok(()), super::encode(header, &mut buffer));
+        assert!(super::encode(header, &mut buffer).is_ok());
         assert_eq!(
             buffer,
             vec![0, 0, 0, RGB_MODE, 0, 0, 0, bits_per_channel, 0, 0]
@@ -69,11 +70,13 @@ mod tests {
         let header = Header::new_alpha();
         let mut buffer = vec![0; 1];
         let encoded = super::encode(header, &mut buffer);
+
         assert_eq!(
-            encoded,
-            Err(HeaderEncodeError(
-                "Not enough to encode header mode.".to_string()
-            ))
+            encoded
+                .unwrap_err()
+                .downcast::<HeaderEncodeError>()
+                .unwrap(),
+            HeaderEncodeError("Not enough to encode header mode.".to_string())
         );
     }
 
@@ -83,11 +86,13 @@ mod tests {
         let header = Header::new_rgb(bits_per_channel);
         let mut buffer = vec![0; 4];
         let encoded = super::encode(header, &mut buffer);
+
         assert_eq!(
-            encoded,
-            Err(HeaderEncodeError(
-                "Not enough to encode header bits per channel.".to_string()
-            ))
+            encoded
+                .unwrap_err()
+                .downcast::<HeaderEncodeError>()
+                .unwrap(),
+            HeaderEncodeError("Not enough to encode header bits per channel.".to_string())
         );
     }
 }
