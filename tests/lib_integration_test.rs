@@ -43,18 +43,17 @@ mod tests {
         let secret_message = "The quick brown fox jumps over the lazy dog".as_bytes();
         let secret_filename = "secret.txt";
 
-        let image = RgbaImage::new(120, 120);
+        let image_buffer = RgbaImage::new(120, 120).into_vec();
 
-        let encoded_image = encoder::encode(
+        let encoded_data = encoder::encode(
             &algorithm,
-            image,
+            image_buffer,
             secret_message.to_vec(),
             secret_filename.to_string(),
         )
         .unwrap();
 
-        let (decoded_filename, decoded_buffer) = decoder::decode(encoded_image).unwrap();
-
+        let (decoded_filename, decoded_buffer) = decoder::decode(encoded_data).unwrap();
         assert_eq!(secret_filename, decoded_filename);
         assert_eq!(secret_message, decoded_buffer);
     }

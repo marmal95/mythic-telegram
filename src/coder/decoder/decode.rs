@@ -1,7 +1,9 @@
+use anyhow::Result;
+
 use crate::coder::error::DecodeError;
 
 pub trait Decode {
-    fn decode(mut self: Box<Self>) -> Result<(String, Vec<u8>), DecodeError> {
+    fn decode(mut self: Box<Self>) -> Result<(String, Vec<u8>)> {
         let file_name_length = self
             .decode_length()
             .ok_or(self.not_available("filename length"))?;

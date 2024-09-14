@@ -3,18 +3,15 @@ mod decode;
 mod header_decoder;
 mod rgb_decoder;
 
-use std::error::Error;
-
-use image::RgbaImage;
+use anyhow::Result;
 
 use self::{alpha_decoder::AlphaDecoder, decode::Decode, rgb_decoder::RgbDecoder};
 
 use super::header::{AlgHeader, Header};
 
-pub fn decode(image: RgbaImage) -> Result<(String, Vec<u8>), Box<dyn Error>> {
-    let mut buffer = image.into_raw();
-    let header = header_decoder::decode(&buffer)?;
-    let buffer = buffer.split_off(header.size() * 4);
+pub fn decode(mut image_buffer: Vec<u8>) -> Result<(String, Vec<u8>)> {
+    let header = header_decoder::decode(&image_buffer)?;
+    let buffer = image_buffer.split_off(header.size() * 4);
 
     let decoder = create_decoder(&header, &buffer);
     let decoded = decoder.decode()?;

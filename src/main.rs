@@ -1,49 +1,43 @@
-use image::io::Reader as ImageReader;
+use anyhow::Result;
+use image::{io::Reader as ImageReader, GenericImageView, RgbaImage};
 use mythic_telegram::{
     coder,
     config::{self, Config, DecodeConfig, EncodeConfig, Mode},
+    file,
 };
-use std::{
-    error::Error,
-    fs::File,
-    io::{Read, Write},
-};
+use std::path::Path;
 
-fn encode(config: &EncodeConfig) -> Result<(), Box<dyn Error>> {
-    let image_filename = config.image_file.to_str().unwrap();
-    let secret_filename = config.secret_file.to_str().unwrap();
+fn encode(config: &EncodeConfig) -> Result<()> {
+    let image_path = Path::new(&config.image_file);
+    let secret_file_path = Path::new(&config.secret_file);
 
-    let mut secret_file = File::open(secret_filename)?;
+    let image = ImageReader::open(image_path)?.decode()?;
+    let (image_width, image_height) = image.dimensions();
 
-    let mut data_buffer = Vec::new();
-    secret_file.read_to_end(&mut data_buffer)?;
-
-    let image = ImageReader::open(image_filename)?.decode()?;
-    let encoded_filename = "encoded_".to_owned() + image_filename;
-
-    let encoded_image = coder::encoder::encode(
+    let encoded_data = coder::encoder::encode(
         &config.algorithm,
-        image.to_rgba8(),
-        data_buffer,
-        secret_filename.to_string(),
+        image.to_rgba8().into_vec(),
+        file::read_bytes(&config.secret_file)?,
+        file::extract_file_name(secret_file_path)?,
     )?;
+    let encoded_image = RgbaImage::from_vec(image_width, image_height, encoded_data).unwrap();
 
-    encoded_image.save(encoded_filename.as_str())?;
+    let image_filename = file::extract_file_name(image_path)?;
+    encoded_image.save(image_path.with_file_name(format!("encoded_{}", image_filename)))?;
     Ok(())
 }
 
-fn decode(config: &DecodeConfig) -> Result<(), Box<dyn Error>> {
-    let image_filename = config.image_file.to_str().unwrap();
-    let image = ImageReader::open(image_filename)?.decode()?;
+fn decode(config: &DecodeConfig) -> Result<()> {
+    let image_path = Path::new(&config.image_file);
+    let image = ImageReader::open(image_path)?.decode()?;
+    let image_data = image.to_rgba8().into_vec();
 
-    let (file_name, decoded_data) = coder::decoder::decode(image.to_rgba8())?;
-
-    let mut data_file = File::create(file_name)?;
-    data_file.write_all(&decoded_data)?;
-    Ok(())
+    let (file_name, decoded_data) = coder::decoder::decode(image_data)?;
+    let secret_file_path = image_path.with_file_name(file_name);
+    file::write_bytes(&secret_file_path, &decoded_data)
 }
 
-fn run(config: Config) -> Result<(), Box<dyn Error>> {
+fn run(config: Config) -> Result<()> {
     match config.mode {
         Mode::Encode(encode_cfg) => encode(&encode_cfg)?,
         Mode::Decode(decode_cfg) => decode(&decode_cfg)?,
@@ -51,6 +45,6 @@ fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     run(config::parse())
 }

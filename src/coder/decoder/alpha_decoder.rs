@@ -36,10 +36,8 @@ mod tests {
         let decoder = create_decoder(&buffer);
         let decoded = decoder.decode();
         assert_eq!(
-            decoded,
-            Err(DecodeError(
-                "Not enough data to decode filename length".to_string()
-            ))
+            decoded.unwrap_err().downcast::<DecodeError>().unwrap(),
+            DecodeError("Not enough data to decode filename length".to_string())
         );
     }
 
@@ -60,10 +58,8 @@ mod tests {
         let decoder = create_decoder(&buffer);
         let decoded = decoder.decode();
         assert_eq!(
-            decoded,
-            Err(DecodeError(
-                "Not enough data to decode filename".to_string()
-            ))
+            decoded.unwrap_err().downcast::<DecodeError>().unwrap(),
+            DecodeError("Not enough data to decode filename".to_string())
         );
     }
 
@@ -82,10 +78,8 @@ mod tests {
         let decoder = create_decoder(&buffer);
         let decoded = decoder.decode();
         assert_eq!(
-            decoded,
-            Err(DecodeError(
-                "Not enough data to decode data length".to_string()
-            ))
+            decoded.unwrap_err().downcast::<DecodeError>().unwrap(),
+            DecodeError("Not enough data to decode data length".to_string())
         );
     }
 
@@ -128,8 +122,8 @@ mod tests {
         let decoder = create_decoder(&buffer);
         let decoded = decoder.decode();
         assert_eq!(
-            decoded,
-            Err(DecodeError("Not enough data to decode data".to_string()))
+            decoded.unwrap_err().downcast::<DecodeError>().unwrap(),
+            DecodeError("Not enough data to decode data".to_string())
         );
     }
 
